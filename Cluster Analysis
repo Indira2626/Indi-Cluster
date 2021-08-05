@@ -1,0 +1,113 @@
+##Open To modify depends on the author
+---
+title: "Cluster Analysis"
+author: "Indira"
+date: "20/06/2021"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup}
+##Attaching the package
+
+library(dplyr)
+library(cluster)
+library(factoextra)
+library(ggplot2)
+```
+
+```{r}
+##Set the working directory and Creating Cluster data frame
+Cluster_DM <- read.csv("CA_grouptask.csv", sep = ",", header = TRUE, stringsAsFactors = TRUE)
+str(Cluster_DM)
+```
+
+```{r}
+## Data Cleaning
+
+Cluster_DMNEW <- Cluster_DM %>% select(-c(Respondent)) %>% na.omit()
+str(Cluster_DMNEW)
+``` 
+
+```{r}
+## standardization of the dataset
+
+ClusterDMNEW_scaled <- scale(Cluster_DMNEW)
+str(ClusterDMNEW_scaled)
+```
+
+```{r}
+## Creating dissimilarity matrix:
+
+ClusterDMNEW_segdist <- daisy(ClusterDMNEW_scaled)
+```
+
+```{r}
+## K-means clustering: 
+
+ClusterDMNEW_segk <- kmeans(ClusterDMNEW_segdist, centers=4, nstart=10)
+ClusterDMNEW_segk$size
+Cluster_DMNEW$k_segment <- ClusterDMNEW_segk$cluster
+```
+```{r}
+##Getting the K-means clustering visualization
+
+fviz_cluster(ClusterDMNEW_segk, data= Cluster_DMNEW,
+             palette = c("#2E9FDF", "#00AFBB", "#E7B800", "#E7B800"), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw()
+             )
+```
+
+```{r}
+## Getting the summaryof K-means clustering:
+
+Cluster_DMNEW %>% group_by(k_segment) %>% summarise_all(list(mean)) %>% t() %>% round(2)
+
+```
+
+
+```{r}
+## Heirarchical clustering:
+
+ClusterDMNEW_hc <- hclust(ClusterDMNEW_segdist, method="complete")
+plot(ClusterDMNEW_hc)
+```
+## cophenetic correlation coefficient:
+- By looking at the distribution of distance displayed by the Dendogram above, it shows clear visualization.
+- Therefore, we validate our intuition by looking at the cophenetic correlation coefficient. 
+
+```{r}
+## cophenetic correlation coefficient:
+
+cor(cophenetic(ClusterDMNEW_hc), ClusterDMNEW_segdist)
+```
+- By looking at the distribution of distance displayed by the Dendogram above, it shows clear visualization.
+- Therefore, we validate our intuition by looking at the cophenetic correlation coefficient.
+- The overall cophenetic correlation coefficient was 86%, indicating that the similarity matrix of the ClusterDMNEW_hc patterns is faithfully represented in the tree.
+
+
+```{r}
+## Getting Segment Assignments 
+
+plot(ClusterDMNEW_hc) 
+rect.hclust(ClusterDMNEW_hc, k=4, border="red") 
+```
+
+```{r}
+#Creating new variable for h_segment
+
+Cluster_DMNEW$h_segment <- cutree(ClusterDMNEW_hc, k=4)
+table(Cluster_DMNEW$h_segment)
+```
+
+
+```{r} 
+## Evaluation / Validation 
+
+Cluster_DMNEW %>% mutate_if(is.factor, as.numeric) %>% group_by(h_segment) %>% summarise_all(list(mean=mean)) %>% t() %>% round(2)
+```
